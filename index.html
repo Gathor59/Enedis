@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculateur de Facture Électrique</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Calculateur de Facture Électrique</h1>
+        
+        <div class="section">
+            <div class="upload-area" id="uploadArea">
+                <p>📁 Glissez-déposez votre fichier Excel ici ou cliquez pour sélectionner</p>
+                <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
+            </div>
+            <div id="fileInfo" class="file-info" style="display: none;"></div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab(0)">Tarif Simple</button>
+            <button class="tab" onclick="showTab(1)">Heures Creuses/Pleines</button>
+            <button class="tab" onclick="showTab(2)">Tarification Personnalisée</button>
+            <button class="tab" onclick="showTab(3)">Tempo</button>
+            <button class="tab" onclick="showTab(4)">Comparaison</button>
+        </div>
+        
+        <!-- Tarif Simple -->
+        <div class="tab-content active">
+            <div class="section">
+                <h2>💰 Tarif Simple</h2>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Prix du kWh (€)</label>
+                        <input type="number" id="simplePrice" value="0.2016" step="0.0001">
+                    </div>
+                    <div class="control-group subscription-field">
+                        <label>Abonnement mensuel (€)</label>
+                        <input type="number" id="simpleSubscription" value="17.27" step="0.01">
+                    </div>
+                    <div class="control-group">
+                        <button onclick="calculateSimple()">Calculer</button>
+                    </div>
+                </div>
+                <div id="simpleResults" class="results" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <!-- Heures Creuses/Pleines -->
+        <div class="tab-content">
+            <div class="section">
+                <h2>🕐 Heures Creuses / Heures Pleines</h2>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Prix Heures Pleines (€/kWh)</label>
+                        <input type="number" id="hpPrice" value="0.2146" step="0.0001">
+                    </div>
+                    <div class="control-group">
+                        <label>Prix Heures Creuses (€/kWh)</label>
+                        <input type="number" id="hcPrice" value="0.1696" step="0.0001">
+                    </div>
+                    <div class="control-group subscription-field">
+                        <label>Abonnement mensuel (€)</label>
+                        <input type="number" id="hchpSubscription" value="18.01" step="0.01">
+                    </div>
+                </div>
+                
+                <h3>⏰ Configuration des Heures Creuses</h3>
+                <div id="hcPeriods">
+                    <div class="controls hc-period" data-period="0">
+                        <div class="control-group">
+                            <label>Période HC 1 - Début</label>
+                            <input type="time" id="hcStart1" value="00:00">
+                        </div>
+                        <div class="control-group">
+                            <label>Période HC 1 - Fin</label>
+                            <input type="time" id="hcEnd1" value="06:00">
+                        </div>
+                        <div class="control-group">
+                            <button type="button" class="remove-period" onclick="removeHCPeriod(0)" style="background: #e74c3c; margin-top: 25px;">❌ Supprimer</button>
+                        </div>
+                    </div>
+                    <div class="controls hc-period" data-period="1">
+                        <div class="control-group">
+                            <label>Période HC 2 - Début</label>
+                            <input type="time" id="hcStart2" value="22:00">
+                        </div>
+                        <div class="control-group">
+                            <label>Période HC 2 - Fin</label>
+                            <input type="time" id="hcEnd2" value="00:00">
+                        </div>
+                        <div class="control-group">
+                            <button type="button" class="remove-period" onclick="removeHCPeriod(1)" style="background: #e74c3c; margin-top: 25px;">❌ Supprimer</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <div class="control-group">
+                        <button onclick="addHCPeriod()" style="background: #3498db;">➕ Ajouter une période HC</button>
+                    </div>
+                    <div class="control-group">
+                        <button onclick="calculateHCHP()">Calculer</button>
+                    </div>
+                </div>
+                <div id="hchpResults" class="results" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <!-- Tarification Personnalisée -->
+        <div class="tab-content">
+            <div class="section">
+                <h2>⚙️ Tarification Personnalisée</h2>
+                
+                <div class="controls">
+                    <div class="control-group subscription-field">
+                        <label>Abonnement mensuel (€)</label>
+                        <input type="number" id="customSubscription" value="18.01" step="0.01">
+                    </div>
+                    <div class="control-group">
+                        <label>Mode de tarification</label>
+                        <select id="customMode" onchange="toggleCustomMode()">
+                            <option value="hourly">Par tranches horaires</option>
+                            <option value="weekly">Par jours de la semaine</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Mode horaire -->
+                <div id="hourlyMode">
+                    <h3>⏰ Périodes Horaires</h3>
+                    <div id="customPeriods">
+                        <div class="controls custom-period" data-period="0">
+                            <div class="control-group">
+                                <label>Période 1 - Début</label>
+                                <input type="time" id="period1Start" value="00:00">
+                            </div>
+                            <div class="control-group">
+                                <label>Période 1 - Fin</label>
+                                <input type="time" id="period1End" value="06:00">
+                            </div>
+                            <div class="control-group">
+                                <label>Prix Période 1 (€/kWh)</label>
+                                <input type="number" id="period1Price" value="0.1696" step="0.0001">
+                            </div>
+                            <div class="control-group">
+                                <button type="button" onclick="removeCustomPeriod(0)" style="background: #e74c3c; margin-top: 25px;">❌ Supprimer</button>
+                            </div>
+                        </div>
+                        <div class="controls custom-period" data-period="1">
+                            <div class="control-group">
+                                <label>Période 2 - Début</label>
+                                <input type="time" id="period2Start" value="06:00">
+                            </div>
+                            <div class="control-group">
+                                <label>Période 2 - Fin</label>
+                                <input type="time" id="period2End" value="22:00">
+                            </div>
+                            <div class="control-group">
+                                <label>Prix Période 2 (€/kWh)</label>
+                                <input type="number" id="period2Price" value="0.2146" step="0.0001">
+                            </div>
+                            <div class="control-group">
+                                <button type="button" onclick="removeCustomPeriod(1)" style="background: #e74c3c; margin-top: 25px;">❌ Supprimer</button>
+                            </div>
+                        </div>
+                        <div class="controls custom-period" data-period="2">
+                            <div class="control-group">
+                                <label>Période 3 - Début</label>
+                                <input type="time" id="period3Start" value="22:00">
+                            </div>
+                            <div class="control-group">
+                                <label>Période 3 - Fin</label>
+                                <input type="time" id="period3End" value="00:00">
+                            </div>
+                            <div class="control-group">
+                                <label>Prix Période 3 (€/kWh)</label>
+                                <input type="number" id="period3Price" value="0.1696" step="0.0001">
+                            </div>
+                            <div class="control-group">
+                                <button type="button" onclick="removeCustomPeriod(2)" style="background: #e74c3c; margin-top: 25px;">❌ Supprimer</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="controls">
+                        <div class="control-group">
+                            <button onclick="addCustomPeriod()" style="background: #3498db;">➕ Ajouter une période</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mode hebdomadaire -->
+                <div id="weeklyMode" style="display: none;">
+                    <h3>📅 Tarification par Jour de la Semaine</h3>
+                    
+                    <div class="weekly-config">
+                        <div class="day-config">
+                            <h4>🌅 Lundi</h4>
+                            <div class="controls">
+                                <div class="control-group">
+                                    <label>Prix HC (€/kWh)</label>
+                                    <input type="number" id="mondayHC" value="0.1696" step="0.0001">
+                                </div>
+                                <div class="control-group">
+                                    <label>Prix HP (€/kWh)</label>
+                                    <input type="number" id="mondayHP" value="0.2146" step="0.0001">
+                                </div>
+                                <div class="control-group">
+                                    <label>HC Début</label>
+                                    <input type="time" id="mondayHCStart" value="00:00">
+                                </div>
+                                <div class="control-group">
+                                    <label>HC Fin</label>
+                                    <input type="time" id="mondayHCEnd" value="06:00">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="day-config">
+                            <h4>🌅 Mardi</h4>
+                            <div class="controls">
+                                <div class="control-group">
+                                    <label>Prix HC (€/kWh)</label>
+                                    <input type="number" id="tuesdayHC" value="0.1696" step="0.0001">
+                                </div>
+                                <div class="control-group">
+                                    <label>Prix HP (€/kWh)</label>
+                                    <input type="number" id="tuesdayHP" value="0.2146" step="0.0001">
+                                </div>
+                                <div class="control-group">
+                                    <label>HC Début</label>
+                                    <input type="time" id="tuesdayHCStart" value="00:00">
+                                </div>
+                                <div class="control-group">
+                                    <label>HC Fin</label>
+                                    <input type="time" id="tuesdayHCEnd" value="06:00">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="day-config">
+                            <h4>🌅 Mercredi</h4>
+                            <div class="controls">
+                                <div class="control-group">
+                                    <label>Prix HC (€/kWh)</label>
+                                    <input type="number" id="wednesdayHC" value="0.1696" step="0.0001">
+                                </div>
+                                <div class="control-group">
+                                    <label>Prix HP (€/kWh)</label>
+                                    <input type="number" id="wednesdayHP" value="0.2146" step="0.0001">
+                                </div>
+                                <div class="control-group">
+                                    <label>HC Début</label>
+                                    <input type="time" id="wednesdayHCStart" value="00:00">
+                                </div>
+                                <div class="control-group">
+                                    <label>HC Fin</label>
+                                    <input type="time" id="wednesdayHCEnd" value="06:00">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="day-config">
+                            <h4>🌅 Jeudi</h4>
+                            <div class="controls">
+                                <div class="control-group">
+                                    <label>Prix HC (€/kWh)</label>
+                                    <input type="number" id="thursdayHC" value="0.1696" step="0.0001">
+                                </div>
+                                <div class="control-group">
+                                    <label>Prix HP (€/kWh)</label>
+                                    <input type="number" id="thursdayHP" value="0.2146" step="0.0001">
+                                </div>
+                                <div class="control-group">
+                                    <label>HC Début</label>
+                                    <input type="time" id="thursdayHCStart" value="00:00">
+                                </div>
+                                <div class="control-group">
+                                    <label>HC Fin</label>
+                                    <input type="time" id="thursdayHCEnd" value="06:00">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="day-config">
+                            <h4>🌅 Vendredi</h4>
+                            <div class="controls">
+                                <div class="control-group">
+                                    <label>Prix HC (€/kWh)</label>
+                                    <input type="number" id="fridayHC" value="0.1696" step="0.0001">
+                                </div>
+                                <div class="control-group">
+                                    <label>Prix HP (€/kWh)</label>
+                                    <input type="number" id="fridayHP" value="0.2146" step="0.0001">
+                                </div>
+                                <div class="control-group">
+                                    <label>HC Début</label>
+                                    <input type="time" id="fridayHCStart" value="00:00">
+                                </div>
+                                <div class="control-group">
+                                    <label>HC Fin</label>
+                                    <input type="time" id="fridayHCEnd" value="06:00">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="day-config weekend">
+                            <h4>🌴 Samedi</h4>
+                            <div class="controls">
+                                <div class="control-group">
+                                    <label>Prix HC (€/kWh)</label>
+                                    <input type="number" id="saturdayHC" value="0.1500" step="0.0001">
+                                </div>
+                                <div class="control-group">
+                                    <label>Prix HP (€/kWh)</label>
+                                    <input type="number" id="saturdayHP" value="0.1900" step="0.0001">
+                                </div>
+                                <div class="control-group">
+                                    <label>HC Début</label>
+                                    <input type="time" id="saturdayHCStart" value="00:00">
+                                </div>
+                                <div class="control-group">
+                                    <label>HC Fin</label>
+                                    <input type="time" id="saturdayHCEnd" value="10:00">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="day-config weekend">
+                            <h4>🌴 Dimanche</h4>
+                            <div class="controls">
+                                <div class="control-group">
+                                    <label>Prix HC (€/kWh)</label>
+                                    <input type="number" id="sundayHC" value="0.1500" step="0.0001">
+                                </div>
+                                <div class="control-group">
+                                    <label>Prix HP (€/kWh)</label>
+                                    <input type="number" id="sundayHP" value="0.1900" step="0.0001">
+                                </div>
+                                <div class="control-group">
+                                    <label>HC Début</label>
+                                    <input type="time" id="sundayHCStart" value="00:00">
+                                </div>
+                                <div class="control-group">
+                                    <label>HC Fin</label>
+                                    <input type="time" id="sundayHCEnd" value="10:00">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <div class="control-group">
+                        <button onclick="calculateCustom()">Calculer</button>
+                    </div>
+                </div>
+                <div id="customResults" class="results" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <!-- Tempo -->
+        <div class="tab-content">
+            <div class="section">
+                <h2>🚦 Tarification Tempo</h2>
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <h4 style="color: #856404; margin-bottom: 10px;">ℹ️ Horaires Tempo</h4>
+                    <p style="color: #856404; margin: 0;">
+                        <strong>Heures Pleines :</strong> 6h00 → 22h00<br>
+                        <strong>Heures Creuses :</strong> 22h00 → 6h00 (le lendemain)
+                    </p>
+                </div>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Bleu HP (€/kWh)</label>
+                        <input type="number" id="tempoBleuHP" value="0.1552" step="0.0001">
+                    </div>
+                    <div class="control-group">
+                        <label>Bleu HC (€/kWh)</label>
+                        <input type="number" id="tempoBleuHC" value="0.1288" step="0.0001">
+                    </div>
+                </div>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Blanc HP (€/kWh)</label>
+                        <input type="number" id="tempoBlancHP" value="0.1792" step="0.0001">
+                    </div>
+                    <div class="control-group">
+                        <label>Blanc HC (€/kWh)</label>
+                        <input type="number" id="tempoBlancHC" value="0.1447" step="0.0001">
+                    </div>
+                </div>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Rouge HP (€/kWh)</label>
+                        <input type="number" id="tempoRougeHP" value="0.6586" step="0.0001">
+                    </div>
+                    <div class="control-group">
+                        <label>Rouge HC (€/kWh)</label>
+                        <input type="number" id="tempoRougeHC" value="0.1518" step="0.0001">
+                    </div>
+                </div>
+                <div class="controls">
+                    <div class="control-group subscription-field">
+                        <label>Abonnement mensuel (€)</label>
+                        <input type="number" id="tempoSubscription" value="17.45" step="0.01">
+                    </div>
+                    <div class="control-group">
+                        <button onclick="calculateTempo()">Calculer</button>
+                    </div>
+                </div>
+                <div id="tempoResults" class="results" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <!-- Comparaison -->
+        <div class="tab-content">
+            <div class="section">
+                <h2>📊 Comparaison des Tarifs</h2>
+                <div class="controls">
+                    <div class="control-group">
+                        <button onclick="calculateComparison()">Comparer tous les tarifs</button>
+                    </div>
+                </div>
+                <div id="comparisonResults" class="results" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ajout de la bibliothèque SheetJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="script.js?v=2"></script>
+</body>
+</html>
