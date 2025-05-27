@@ -1,0 +1,96 @@
+function telechargerHistorique() {
+  // Configuration
+  const dateDebut = new Date(2024, 4, 01); // 01 mai 2024. Les mois vont de 0 à 11
+  const dateFin = new Date(2025, 3, 30);   // 30 avril 2025. Les mois vont de 0 à 11
+  const intervalleJours = 7;               // Période de 7 jours
+  const chevauchement = 1;                 // Chevauchement 1 jour entre périodes
+  const delaiEntreTelechargementsMs = 2500; // Délai 2,5 s entre téléchargements 
+  const personneId ='XXX';
+  const prmId ='XXX';
+  
+  // Fonction pour formater la date au format YYYY-MM-DD pour l'URL
+  function formatDateUrl(date) {
+    const jour = date.getDate().toString().padStart(2, '0');
+    const mois =(date.getMonth()+ 1).toString().padStart(2, '0');
+    const annee = date.getFullYear();
+    return `${annee}-${mois}-${jour}`;
+  }
+  
+  // Générer les périodes de 7 jours avec chevauchement
+  const periodes =[];
+  let dateActuelle = new Date(dateDebut);
+  while (dateActuelle < dateFin) {
+    const finPeriode = new Date(dateActuelle);
+    finPeriode.setDate(finPeriode.getDate()+(intervalleJours - 1));
+    if (finPeriode > dateFin) {
+      finPeriode.setTime(dateFin.getTime());
+    }
+    periodes.push({
+      debut: new Date(dateActuelle),
+      fin: new Date(finPeriode)
+    });
+    dateActuelle.setDate(dateActuelle.getDate()+(intervalleJours - chevauchement));
+  }
+  console.log(`Total de ${periodes.length} périodes à télécharger avec chevauchement d'un jour`);
+  
+  // Créer un élément iframe invisible pour télécharger sans ouvrir de nouvelles fenêtres
+  function creerIframeTelechargement() {
+    const iframe = document.createElement('iframe');
+    iframe.style.display ='none';
+    document.body.appendChild(iframe);
+    return iframe;
+  }
+  
+  // Fonction pour générer l'URL de téléchargement
+  function genererURL(debut, fin) {
+    const urlBase ='https://alex.microapplications.enedis.fr/mes-mesures-prm/api/private/v1';
+    return `${urlBase}/personnes/${personneId}/prms/${prmId}/donnees-energetiques/file?mesuresTypeCode=COURBE&mesuresCorrigees=false&typeDonnees=CONS&dateDebut=${formatDateUrl(debut)}&dateFin=${formatDateUrl(fin)}&format=EXCEL`;
+  }
+  // Télécharger via un iframe
+  function telechargerViaIframe() {
+    let index = 0;
+    const iframe = creerIframeTelechargement();
+    
+    function telechargerSuivant() {
+      if (index >= periodes.length) {
+        document.body.removeChild(iframe);
+        console.log("Tous les téléchargements sont terminés!");
+        return;
+      }
+      
+      const periode = periodes[index];
+      const url = genererURL(periode.debut, periode.fin);
+      console.log(`Téléchargement ${index + 1}/${periodes.length}: ${formatDateUrl(periode.debut)}-${formatDateUrl(periode.fin)}`);
+      
+      // Utiliser l'iframe pour télécharger
+      iframe.src = url;
+      
+      // Passer au suivant après un court délai
+      index++;
+      setTimeout(telechargerSuivant, delaiEntreTelechargementsMs);
+    }
+    telechargerSuivant();
+  }
+  
+  // Fonction pour afficher le détail des périodes
+  function afficherPeriodes() {
+    console.log("Détail des périodes avec chevauchement :");
+    periodes.forEach((periode, idx)=> {
+      console.log(`Période ${idx + 1}: ${formatDateUrl(periode.debut)}-> ${formatDateUrl(periode.fin)}`);
+    });
+  }
+  
+  // Rendre les fonctions disponibles globalement
+  window.telechargerViaIframe = telechargerViaIframe;
+  window.afficherPeriodes = afficherPeriodes;
+  console.log("Script de téléchargement prêt.");
+  console.log("Saisissez telechargerViaIframe() pour démarrer le téléchargement");
+  return {
+    periodes,
+    telechargerViaIframe,
+    afficherPeriodes
+  };
+}
+
+// Initialiser le script
+telechargerHistorique();
