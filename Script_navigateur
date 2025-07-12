@@ -1,12 +1,13 @@
 function telechargerHistorique() {
   // Configuration
-  const dateDebut = new Date(2024, 4, 01); // 01 mai 2024. Les mois vont de 0 à 11
+  const dateDebut = new Date(2024, 4, 1); // 01 mai 2024. Les mois vont de 0 à 11
   const dateFin = new Date(2025, 3, 30);   // 30 avril 2025. Les mois vont de 0 à 11
   const intervalleJours = 7;               // Période de 7 jours
   const chevauchement = 1;                 // Chevauchement 1 jour entre périodes
   const delaiEntreTelechargementsMs = 2500; // Délai 2,5 s entre téléchargements 
   const personneId ='XXX';
   const prmId ='XXX';
+  const typeTelechargement = "TOUT";    // Pour fichiers de consommation: 'CONS'; pour fichier de production:'PROD'; pour les 2 fichiers:'BOTH'; pour fichier consolidé "TOUT"
   
   // Fonction pour formater la date au format YYYY-MM-DD pour l'URL
   function formatDateUrl(date) {
@@ -42,13 +43,24 @@ function telechargerHistorique() {
   }
   
   // Fonction pour générer l'URL de téléchargement
-  function genererURL(debut, fin) {
-    const urlBase ='https://alex.microapplications.enedis.fr/mes-mesures-prm/api/private/v1';
-    return `${urlBase}/personnes/${personneId}/prms/${prmId}/donnees-energetiques/file?mesuresTypeCode=COURBE&mesuresCorrigees=false&typeDonnees=CONS&dateDebut=${formatDateUrl(debut)}&dateFin=${formatDateUrl(fin)}&format=EXCEL`;
+  function genererURL(debut, fin, typeDonnees) {
+    const urlBase = 'https://alex.microapplications.enedis.fr/mes-mesures-prm/api/private/v1';
+    return `${urlBase}/personnes/${personneId}/prms/${prmId}/donnees-energetiques/file?mesuresTypeCode=COURBE&mesuresCorrigees=false&typeDonnees=${typeDonnees}&dateDebut=${formatDateUrl(debut)}&dateFin=${formatDateUrl(fin)}&format=EXCEL`;
   }
   // Télécharger via un iframe
   function telechargerViaIframe() {
     let index = 0;
+    let typeIndex = 0;
+    let types;
+    if (typeTelechargement === 'CONS') {
+      types = ['CONS'];
+    } else if (typeTelechargement === 'PROD') {
+      types = ['PROD'];
+    } else if (typeTelechargement === 'TOUT') {
+      types = ['TOUT'];
+    } else {
+      types = ['CONS', 'PROD'];
+    }
     const iframe = creerIframeTelechargement();
     
     function telechargerSuivant() {
@@ -59,14 +71,19 @@ function telechargerHistorique() {
       }
       
       const periode = periodes[index];
-      const url = genererURL(periode.debut, periode.fin);
-      console.log(`Téléchargement ${index + 1}/${periodes.length}: ${formatDateUrl(periode.debut)}-${formatDateUrl(periode.fin)}`);
+      const typeDonnees = types[typeIndex];
+      const url = genererURL(periode.debut, periode.fin, typeDonnees);
+      console.log(`Téléchargement ${index + 1}/${periodes.length} [${typeDonnees}]: ${formatDateUrl(periode.debut)}-${formatDateUrl(periode.fin)}`);
       
       // Utiliser l'iframe pour télécharger
       iframe.src = url;
       
-      // Passer au suivant après un court délai
-      index++;
+      // Passer au type suivant ou à la période suivante après un court délai
+      typeIndex++;
+      if (typeIndex >= types.length) {
+        typeIndex = 0;
+        index++;
+      }
       setTimeout(telechargerSuivant, delaiEntreTelechargementsMs);
     }
     telechargerSuivant();
