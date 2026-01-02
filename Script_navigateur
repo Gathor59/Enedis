@@ -43,8 +43,8 @@ function telechargerHistorique() {
   
   // Fonction pour générer l'URL de téléchargement
   function genererURL(debut, fin) {
-    const urlBase ='https://alex.microapplications.enedis.fr/mes-mesures-prm/api/private/v1';
-    return `${urlBase}/personnes/${personneId}/prms/${prmId}/donnees-energetiques/file?mesuresTypeCode=COURBE&mesuresCorrigees=false&typeDonnees=CONS&dateDebut=${formatDateUrl(debut)}&dateFin=${formatDateUrl(fin)}&format=EXCEL`;
+    const urlBase ='https://alex.microapplications.enedis.fr/mes-mesures-prm/api/private/v2';
+    return `${urlBase}/personnes/${personneId}/prms/${prmId}/donnees-energetiques/file?mesuresTypeCode=COURBE&mesuresCorrigees=false&typeDonnees=CONS&dateDebut=${formatDateUrl(debut)}&dateFin=${formatDateUrl(fin)}&format=EXCEL&segments=C5`;
   }
   // Télécharger via un iframe
   function telechargerViaIframe() {
